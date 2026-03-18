@@ -27,8 +27,6 @@ import org.rusherhack.core.event.subscribe.Subscribe;
 import org.rusherhack.core.interfaces.IClickable;
 import org.rusherhack.core.setting.BooleanSetting;
 import org.rusherhack.core.setting.NumberSetting;
-import org.rusherhack.core.utils.ColorUtils;
-import org.rusherhack.core.utils.MathUtils;
 import org.rusherhack.core.utils.Timer;
 
 import javax.imageio.ImageIO;
@@ -48,7 +46,6 @@ import java.nio.ByteBuffer;
  */
 public class SpotifyHudElement extends ResizeableHudElement {
 	
-	public static final int BACKGROUND_COLOR = ColorUtils.transparency(Color.BLACK.getRGB(), 0.5f);
 	private static final PlaybackState.Item AI_DJ_SONG = new PlaybackState.Item(); //item that is displayed when the DJ is talking
 	
 	static {
@@ -79,7 +76,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 	 * Media Controller
 	 */
 	private final SongInfoHandler songInfo;
-	private final DurationHandler duration;
 	
 	/**
 	 * Variables
@@ -94,7 +90,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		super("Spotify");
 		this.plugin = plugin;
 		
-		this.duration = new DurationHandler();
 		this.songInfo = new SongInfoHandler();
 
 		this.trackThumbnailTexture = new DynamicTexture(640, 640, false);
@@ -284,15 +279,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		
 		/////////////////////////////////////////////////////////////////////
 		
-		/////////////////////////////////////////////////////////////////////
-		//bottom
-		/////////////////////////////////////////////////////////////////////
-		final double bottomOffset = this.getHeight() - 5 - this.duration.getHeight();
-		this.duration.setX(leftOffset);
-		this.duration.setY(bottomOffset);
-		this.duration.render(renderer, context, mouseX, mouseY, status);
-		
-		/////////////////////////////////////////////////////////////////////
 	}
 	
 	// clicking on the buttons while in chat
@@ -322,20 +308,10 @@ public class SpotifyHudElement extends ResizeableHudElement {
 	
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		if(this.duration.mouseClicked(mouseX, mouseY, button)) {
-			return true;
-		}
-
 		if(this.consumedButtonClick) {
 			return true;
 		}
 		return super.mouseClicked(mouseX, mouseY, button);
-	}
-
-	@Override
-	public void mouseReleased(double mouseX, double mouseY, int button) {
-		this.duration.mouseReleased(mouseX, mouseY, button);
-		super.mouseReleased(mouseX, mouseY, button);
 	}
 	
 	@Override
@@ -533,153 +509,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 				this.scrollingForward = false;
 			}
 		}
-	}
-	
-	class DurationHandler extends ElementHandler {
-		
-		private static final double PROGRESS_BAR_HEIGHT = 2;
-		
-		/**
-		 * Variables
-		 */
-		private boolean seeking = false;
-		
-		@Override
-		void render(IRenderer2D renderer, RenderContext context, double mouseX, double mouseY, PlaybackState status) {
-			final IFontRenderer fr = SpotifyHudElement.this.getFontRenderer();
-			final PoseStack matrixStack = context.pose();
-			PlaybackState.Item song = status.item;
-			
-			if(song == null) {
-				song = new PlaybackState.Item();
-				
-				song.duration_ms = 30000;
-			}
-			
-			final boolean hovered = this.isHovered(mouseX, mouseY);
-			
-			matrixStack.pushPose();
-			matrixStack.translate(this.getX(), this.getY(), 0);
-			
-			final double mouseXOffset = SpotifyHudElement.this.getStartX() + this.getScaledX();
-			final double mouseYOffset = SpotifyHudElement.this.getStartY() + this.getScaledY();
-			mouseX -= (int) mouseXOffset;
-			mouseY -= (int) mouseYOffset;
-			mouseX = (int) (mouseX / this.getScale());
-			mouseY = (int) (mouseY / this.getScale());
-			
-			final double width = this.getWidth();
-			double bottomOffset = this.getHeight();
-			final double seekingProgress = MathUtils.clamp((double) mouseX / width, 0, 1);
-			
-			//progress bar
-			final double progressBarHeight = PROGRESS_BAR_HEIGHT;
-			
-			final long progress_ms = status.progress_ms + (status.is_playing ? plugin.getAPI().getMsSinceLastUpdate() : 0);
-			
-			final double progress = (double) progress_ms / (double) song.duration_ms;
-			
-			final boolean hoveredOverProgressBar = hovered && mouseY >= bottomOffset - progressBarHeight - 1;
-			renderer._drawRoundedRectangle(0, bottomOffset - progressBarHeight, width, progressBarHeight, 1, true, false, 0, Color.GRAY.getRGB(), 0);
-			renderer._drawRoundedRectangle(0, bottomOffset - progressBarHeight, width * (this.seeking ? seekingProgress : progress), progressBarHeight, 1, true, false, 0, hoveredOverProgressBar || this.seeking ? Color.GREEN.getRGB() : Color.WHITE.getRGB(), 0);
-			bottomOffset -= progressBarHeight + 1;
-			
-			//duration
-			final String current = String.format("%d:%02d", progress_ms / 60000, progress_ms / 1000 % 60);
-			final String length = String.format("%d:%02d", song.duration_ms / 60000, song.duration_ms / 1000 % 60);
-			final double durationHeight = fr.getFontHeight() + 1;
-			fr.drawString(current, 0, bottomOffset - durationHeight, Color.LIGHT_GRAY.getRGB());
-			fr.drawString(length, width - fr.getStringWidth(length), bottomOffset - durationHeight, Color.LIGHT_GRAY.getRGB());
-			bottomOffset -= durationHeight - 1;
-			
-			//seeking
-			if(this.seeking) {
-				final int seekingProgressMs = (int) (seekingProgress * song.duration_ms);
-				final String seekingTime = String.format("%d:%02d", seekingProgressMs / 60000, seekingProgressMs / 1000 % 60);
-				final double seekingTimeWidth = fr.getStringWidth(seekingTime);
-				final double seekX = MathUtils.clamp(mouseX, 0, width);
-				
-				renderer._drawRoundedRectangle(seekX - seekingTimeWidth / 2f, this.getHeight() - progressBarHeight - 1 - durationHeight, seekingTimeWidth, durationHeight, 1, true, false, 0, BACKGROUND_COLOR, 0);
-				fr.drawString(seekingTime, seekX - seekingTimeWidth / 2f, this.getHeight() - progressBarHeight - 1 - durationHeight, -1);
-				
-				renderer.drawCircle(seekX, this.getHeight() - 1, 3, Color.WHITE.getRGB());
-			}
-			
-			matrixStack.popPose();
-		}
-		
-		@Override
-		public double getHeight() {
-			return PROGRESS_BAR_HEIGHT + 1 + SpotifyHudElement.this.getFontRenderer().getFontHeight() + 1;
-		}
-		
-		@Override
-		public boolean mouseClicked(double mouseX, double mouseY, int button) {
-			if(!this.isHovered(mouseX, mouseY)) {
-				return false;
-			}
-			
-			//localize mouse pos
-			mouseY -= SpotifyHudElement.this.getStartY();
-			mouseY -= this.getScaledY();
-			mouseY = (int) (mouseY / this.getScale());
-			
-			final SpotifyAPI api = plugin.getAPI();
-			final boolean hoveredOverProgressBar = mouseY >= this.getHeight() - PROGRESS_BAR_HEIGHT - 1;
-			
-			if(hoveredOverProgressBar) {
-				this.seeking = true;
-				return true;
-			}
-			
-			/*
-			try {
-				api.authorizationRefreshToken();
-				return true;
-			} catch(Exception e) {
-				e.printStackTrace();
-			}
-			 */
-			
-			return false;
-		}
-		
-		@Override
-		public void mouseReleased(double mouseX, double mouseY, int button) {
-			if(this.seeking) {
-				this.seeking = false;
-				
-				final SpotifyAPI api = plugin.getAPI();
-				final PlaybackState status = api.getCurrentStatus();
-				
-				if(status == null) {
-					return;
-				}
-				
-				final PlaybackState.Item song = status.item;
-				
-				if(song == null) {
-					return;
-				}
-				
-				//localize mouse pos
-				mouseX -= SpotifyHudElement.this.getStartX();
-				mouseY -= SpotifyHudElement.this.getStartY();
-				mouseX -= this.getScaledX();
-				mouseY -= this.getScaledY();
-				mouseX = (int) (mouseX / this.getScale());
-				mouseY = (int) (mouseY / this.getScale());
-				
-				
-				final double progress = MathUtils.clamp(mouseX / this.getWidth(), 0, 1);
-				final int progressMs = (int) (progress * song.duration_ms);
-				
-				api.submitSeek(progressMs);
-			}
-			
-			super.mouseReleased(mouseX, mouseY, button);
-		}
-		
 	}
 	
 }
