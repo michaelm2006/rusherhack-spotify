@@ -20,7 +20,6 @@ import org.rusherhack.client.api.render.IRenderer2D;
 import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
 import org.rusherhack.client.api.ui.ScaledElementBase;
-import org.rusherhack.client.api.utils.ChatUtils;
 import org.rusherhack.client.api.utils.InputUtils;
 import org.rusherhack.core.event.stage.Stage;
 import org.rusherhack.core.event.subscribe.Subscribe;
@@ -202,7 +201,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		final IRenderer2D renderer = this.getRenderer();
 		final IFontRenderer fr = this.getFontRenderer();
 		final SpotifyAPI api = this.plugin.getAPI();
-		final PoseStack matrixStack = context.pose();
 
 		if(!this.isConnected()) {
 			this.trackThumbnailTexture.setPixels(null);
