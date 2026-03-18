@@ -255,7 +255,7 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		
 		//thumbnail
 		if(this.trackThumbnailTexture.getPixels() != null && this.isAvailable()) {
-			renderer._drawTextureRectangle(this.trackThumbnailTexture.getId(), 65, 65, 5, 5, 65, 65, 3);
+			renderer.drawTextureRectangle(this.trackThumbnailTexture.getId(), 65, 65, 5, 5, 65, 65, 3);
 		}
 		
 		final double leftOffset = 75;
