@@ -19,7 +19,6 @@ import org.rusherhack.client.api.feature.hud.ResizeableHudElement;
 import org.rusherhack.client.api.render.IRenderer2D;
 import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
-import org.rusherhack.client.api.setting.ColorSetting;
 import org.rusherhack.client.api.ui.ScaledElementBase;
 import org.rusherhack.client.api.utils.ChatUtils;
 import org.rusherhack.client.api.utils.InputUtils;
@@ -74,8 +73,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 	 */
 	private final BooleanSetting authenticateButton = new BooleanSetting("Authenticate", true)
 			.setVisibility(() -> !this.isConnected());
-	private final BooleanSetting background = new BooleanSetting("Background", true);
-	private final ColorSetting backgroundColor = new ColorSetting("Color", new Color(BACKGROUND_COLOR, true));
 	private final NumberSetting<Double> updateDelay = new NumberSetting<>("UpdateDelay", 0.5d, 0.25d, 2d);
 	
 	/**
@@ -116,9 +113,7 @@ public class SpotifyHudElement extends ResizeableHudElement {
 			}
 		});
 		
-		this.background.addSubSettings(backgroundColor);
-
-		this.registerSettings(authenticateButton, background, updateDelay);
+		this.registerSettings(authenticateButton, updateDelay);
 		
 		//dont ask
 		//this.setupDummyModuleBecauseImFuckingStupidAndForgotToRegisterHudElementsIntoTheEventBus();
@@ -358,11 +353,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		return false;
 	}
 	
-	private int getFillColor() {
-		//TODO: return color based on song thumbnail
-		return this.backgroundColor.getValueRGB();
-	}
-	
 	private boolean isConnected() {
 		return this.plugin.getAPI() != null && this.plugin.getAPI().isConnected();
 	}
@@ -443,7 +433,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 			matrixStack.translate(this.getX(), this.getY(), 0);
 			renderer.scissorBox(0, 0, this.getWidth(), this.getHeight());
 
-			//smaller scissorbox for title to make room for spotify logo
 			final double titleMaxWidth = this.getWidth();
 			renderer.scissorBox(0, -1, titleMaxWidth, this.getHeight());
 			this.title.render(context, renderer, fr, titleMaxWidth, -1);
