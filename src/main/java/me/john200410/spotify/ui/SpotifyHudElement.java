@@ -14,19 +14,15 @@ import org.apache.commons.io.IOUtils;
 import org.lwjgl.glfw.GLFW;
 import org.lwjgl.system.MemoryStack;
 import org.lwjgl.system.MemoryUtil;
-import org.rusherhack.client.api.bind.key.GLFWKey;
 import org.rusherhack.client.api.events.client.input.EventMouse;
 import org.rusherhack.client.api.feature.hud.ResizeableHudElement;
 import org.rusherhack.client.api.render.IRenderer2D;
 import org.rusherhack.client.api.render.RenderContext;
 import org.rusherhack.client.api.render.font.IFontRenderer;
-import org.rusherhack.client.api.render.graphic.VectorGraphic;
-import org.rusherhack.client.api.setting.BindSetting;
 import org.rusherhack.client.api.setting.ColorSetting;
 import org.rusherhack.client.api.ui.ScaledElementBase;
 import org.rusherhack.client.api.utils.ChatUtils;
 import org.rusherhack.client.api.utils.InputUtils;
-import org.rusherhack.core.bind.key.NullKey;
 import org.rusherhack.core.event.stage.Stage;
 import org.rusherhack.core.event.subscribe.Subscribe;
 import org.rusherhack.core.interfaces.IClickable;
@@ -82,39 +78,28 @@ public class SpotifyHudElement extends ResizeableHudElement {
 	private final ColorSetting backgroundColor = new ColorSetting("Color", new Color(BACKGROUND_COLOR, true));
 	private final NumberSetting<Double> updateDelay = new NumberSetting<>("UpdateDelay", 0.5d, 0.25d, 2d);
 	
-	private final BooleanSetting binds = new BooleanSetting("Binds", false);
-	private final BindSetting playPauseBind = new BindSetting("Play/Pause", NullKey.INSTANCE);
-	private final BindSetting backBind = new BindSetting("Back", NullKey.INSTANCE);
-	private final BindSetting nextBind = new BindSetting("Next", NullKey.INSTANCE);
-	private final BindSetting back5Bind = new BindSetting("Back 5", NullKey.INSTANCE);
-	private final BindSetting next5Bind = new BindSetting("Next 5", NullKey.INSTANCE);
-	
 	/**
 	 * Media Controller
 	 */
 	private final SongInfoHandler songInfo;
 	private final DurationHandler duration;
-	private final MediaControllerHandler mediaController;
 	
 	/**
 	 * Variables
 	 */
-	private final VectorGraphic spotifyLogo;
 	private final DynamicTexture trackThumbnailTexture;
 	private final SpotifyPlugin plugin;
 	private PlaybackState.Item song = null;
 	private boolean consumedButtonClick = false;
 	
 	
-	public SpotifyHudElement(SpotifyPlugin plugin) throws IOException {
+	public SpotifyHudElement(SpotifyPlugin plugin) {
 		super("Spotify");
 		this.plugin = plugin;
 		
-		this.mediaController = new MediaControllerHandler();
 		this.duration = new DurationHandler();
 		this.songInfo = new SongInfoHandler();
-		
-		this.spotifyLogo = new VectorGraphic("spotify/graphics/spotify_logo.svg", 32, 32);
+
 		this.trackThumbnailTexture = new DynamicTexture(640, 640, false);
 		this.trackThumbnailTexture.setFilter(true, true);
 		
@@ -132,9 +117,8 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		});
 		
 		this.background.addSubSettings(backgroundColor);
-		this.binds.addSubSettings(playPauseBind, backBind, nextBind, back5Bind, next5Bind);
-		
-		this.registerSettings(authenticateButton, background, updateDelay, binds);
+
+		this.registerSettings(authenticateButton, background, updateDelay);
 		
 		//dont ask
 		//this.setupDummyModuleBecauseImFuckingStupidAndForgotToRegisterHudElementsIntoTheEventBus();
@@ -313,11 +297,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		this.duration.setY(bottomOffset);
 		this.duration.render(renderer, context, mouseX, mouseY, status);
 		
-		//media controls
-		this.mediaController.setX(leftOffset);
-		this.mediaController.setY(topOffset);
-		this.mediaController.setHeight(bottomOffset - topOffset);
-		this.mediaController.render(renderer, context, mouseX, mouseY, status);
 		/////////////////////////////////////////////////////////////////////
 	}
 	
@@ -346,50 +325,21 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		}
 	}
 	
-	//keybinds
-	@Subscribe(stage = Stage.PRE)
-	private void onKey(EventMouse.Key event) {
-		if(!this.binds.getValue()) {
-			return;
-		}
-		if(event.getAction() != GLFW.GLFW_PRESS) {
-			return;
-		}
-		
-		final SpotifyAPI api = this.plugin.getAPI();
-		
-		if(this.playPauseBind.getValue() instanceof GLFWKey key && key.getKeyCode() == event.getButton()) {
-			api.submitTogglePlay();
-		} else if(this.backBind.getValue() instanceof GLFWKey key && key.getKeyCode() == event.getButton()) {
-			api.submitPrevious();
-		} else if(this.nextBind.getValue() instanceof GLFWKey key && key.getKeyCode() == event.getButton()) {
-			api.submitNext();
-		} else if(this.back5Bind.getValue() instanceof GLFWKey key && key.getKeyCode() == event.getButton()) {
-			api.submitSeek(api.getCurrentStatus().progress_ms - 5000);
-		} else if(this.next5Bind.getValue() instanceof GLFWKey key && key.getKeyCode() == event.getButton()) {
-			api.submitSeek(api.getCurrentStatus().progress_ms + 5000);
-		}
-	}
-	
 	@Override
 	public boolean mouseClicked(double mouseX, double mouseY, int button) {
-		
-		if(this.mediaController.mouseClicked(mouseX, mouseY, button)) {
-			return true;
-		} else if(this.duration.mouseClicked(mouseX, mouseY, button)) {
+		if(this.duration.mouseClicked(mouseX, mouseY, button)) {
 			return true;
 		}
-		
+
 		if(this.consumedButtonClick) {
 			return true;
 		}
 		return super.mouseClicked(mouseX, mouseY, button);
 	}
-	
+
 	@Override
 	public void mouseReleased(double mouseX, double mouseY, int button) {
 		this.duration.mouseReleased(mouseX, mouseY, button);
-		this.mediaController.mouseReleased(mouseX, mouseY, button);
 		super.mouseReleased(mouseX, mouseY, button);
 	}
 	
@@ -492,15 +442,15 @@ public class SpotifyHudElement extends ResizeableHudElement {
 			matrixStack.pushPose();
 			matrixStack.translate(this.getX(), this.getY(), 0);
 			renderer.scissorBox(0, 0, this.getWidth(), this.getHeight());
-			
+
 			//smaller scissorbox for title to make room for spotify logo
-			final double titleMaxWidth = this.getWidth() - 20;
+			final double titleMaxWidth = this.getWidth();
 			renderer.scissorBox(0, -1, titleMaxWidth, this.getHeight());
 			this.title.render(context, renderer, fr, titleMaxWidth, -1);
 			
 			matrixStack.translate(0, fr.getFontHeight() + 1, 0);
 			matrixStack.scale(0.75f, 0.75f, 1);
-			
+
 			this.artists.render(context, renderer, fr, titleMaxWidth / 0.75, Color.LIGHT_GRAY.getRGB());
 			
 			renderer.popScissorBox();
@@ -739,188 +689,6 @@ public class SpotifyHudElement extends ResizeableHudElement {
 			}
 			
 			super.mouseReleased(mouseX, mouseY, button);
-		}
-		
-	}
-	
-	class MediaControllerHandler extends ElementHandler {
-		
-		private static final double CONTROL_SIZE = 16;
-		private static final double PAUSE_PLAY_SIZE = CONTROL_SIZE + 4; //bigger than other controls
-		
-		/**
-		 * Controls
-		 */
-		private final VectorGraphic playGraphic, pauseGraphic;
-		private final VectorGraphic backGraphic, nextGraphic;
-		private final VectorGraphic shuffleOnGraphic, shuffleOffGraphic;
-		private final VectorGraphic loopOffGraphic, loopAllGraphic, loopSameGraphic;
-		private double playPauseX, backX, nextX, shuffleX, loopX;
-		
-		/**
-		 * Variables
-		 */
-		private double height;
-		
-		public MediaControllerHandler() throws IOException {
-			//load graphics
-			this.playGraphic = new VectorGraphic("spotify/graphics/play.svg", 48, 48);
-			this.pauseGraphic = new VectorGraphic("spotify/graphics/pause.svg", 48, 48);
-			this.backGraphic = new VectorGraphic("spotify/graphics/back.svg", 48, 48);
-			this.nextGraphic = new VectorGraphic("spotify/graphics/next.svg", 48, 48);
-			this.shuffleOnGraphic = new VectorGraphic("spotify/graphics/shuffle_on.svg", 48, 48);
-			this.shuffleOffGraphic = new VectorGraphic("spotify/graphics/shuffle_off.svg", 48, 48);
-			this.loopOffGraphic = new VectorGraphic("spotify/graphics/loop_off.svg", 48, 48);
-			this.loopAllGraphic = new VectorGraphic("spotify/graphics/loop_all.svg", 48, 48);
-			this.loopSameGraphic = new VectorGraphic("spotify/graphics/loop_same.svg", 48, 48);
-		}
-		
-		//TODO: this could use some object oriented programming
-		public void render(IRenderer2D renderer, RenderContext context, double mouseX, double mouseY, PlaybackState status) {
-			final PoseStack matrixStack = context.pose();
-			matrixStack.pushPose();
-			matrixStack.translate(this.getX(), this.getY(), 0);
-			
-			final boolean hovered = this.isHovered(mouseX, mouseY);
-			final double mouseXOffset = SpotifyHudElement.this.getStartX() + this.getScaledX();
-			final double mouseYOffset = SpotifyHudElement.this.getStartY() + this.getScaledY();
-			mouseX -= (int) mouseXOffset;
-			mouseY -= (int) mouseYOffset;
-			mouseX = (int) (mouseX / this.getScale());
-			mouseY = (int) (mouseY / this.getScale());
-			
-			final double width = this.getWidth();
-			final double mediaControlsCenter = this.getHeight() / 2f;
-			
-			//play/pause
-			final VectorGraphic playPauseGraphic = status.is_playing ? this.pauseGraphic : this.playGraphic;
-			this.playPauseX = width / 2f - PAUSE_PLAY_SIZE / 2f;
-			final boolean playPauseHovered = hovered && mouseX >= this.playPauseX && mouseX <= this.playPauseX + PAUSE_PLAY_SIZE && mouseY <= this.getScaledY() + PAUSE_PLAY_SIZE;
-			if(playPauseHovered) {
-				renderer._drawRoundedRectangle(this.playPauseX - 1, mediaControlsCenter - PAUSE_PLAY_SIZE / 2f - 1, PAUSE_PLAY_SIZE + 2, PAUSE_PLAY_SIZE + 2, 3, true, false, 0, BACKGROUND_COLOR, 0);
-			}
-			renderer.drawGraphicRectangle(playPauseGraphic, this.playPauseX, mediaControlsCenter - PAUSE_PLAY_SIZE / 2f, PAUSE_PLAY_SIZE, PAUSE_PLAY_SIZE);
-			
-			final double smallerGraphicY = mediaControlsCenter - CONTROL_SIZE / 2f;
-			double mediaLeftOffset = width / 2f - CONTROL_SIZE / 2f - 5;
-			double mediaRightOffset = width / 2f + CONTROL_SIZE / 2f + 5;
-			
-			//back
-			this.backX = mediaLeftOffset - CONTROL_SIZE;
-			final boolean backHovered = hovered && mouseX >= this.backX && mouseX <= this.backX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE;
-			if(backHovered) {
-				renderer._drawRoundedRectangle(this.backX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE, 3, true, false, 0, BACKGROUND_COLOR, 0);
-			}
-			renderer.drawGraphicRectangle(this.backGraphic, this.backX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE);
-			mediaLeftOffset -= CONTROL_SIZE + 5;
-			
-			//next
-			this.nextX = mediaRightOffset;
-			final boolean nextHovered = hovered && mouseX >= this.nextX && mouseX <= this.nextX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE;
-			if(nextHovered) {
-				renderer._drawRoundedRectangle(this.nextX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE, 3, true, false, 0, BACKGROUND_COLOR, 0);
-			}
-			renderer.drawGraphicRectangle(this.nextGraphic, this.nextX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE);
-			mediaRightOffset += CONTROL_SIZE + 5;
-			
-			//shuffle
-			final VectorGraphic shuffleGraphic = status.shuffle_state ? this.shuffleOnGraphic : this.shuffleOffGraphic;
-			this.shuffleX = mediaLeftOffset - CONTROL_SIZE;
-			final boolean shuffleHovered = hovered && mouseX >= this.shuffleX && mouseX <= this.shuffleX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE;
-			if(shuffleHovered) {
-				renderer._drawRoundedRectangle(this.shuffleX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE, 3, true, false, 0, BACKGROUND_COLOR, 0);
-			}
-			renderer.drawGraphicRectangle(shuffleGraphic, this.shuffleX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE);
-			mediaLeftOffset -= CONTROL_SIZE + 5;
-			
-			//loop
-			final VectorGraphic loopGraphic = status.repeat_state.equals("off") ? this.loopOffGraphic : status.repeat_state.equals("track") ? this.loopSameGraphic : this.loopAllGraphic;
-			this.loopX = mediaRightOffset;
-			final boolean loopHovered = hovered && mouseX >= this.loopX && mouseX <= this.loopX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE;
-			if(loopHovered) {
-				renderer._drawRoundedRectangle(this.loopX, smallerGraphicY, CONTROL_SIZE, CONTROL_SIZE, 3, true, false, 0, BACKGROUND_COLOR, 0);
-			}
-			renderer.drawGraphicRectangle(loopGraphic, this.loopX, smallerGraphicY + 1, CONTROL_SIZE, CONTROL_SIZE);
-			mediaRightOffset += CONTROL_SIZE + 5;
-			
-			matrixStack.popPose();
-		}
-		
-		@Override
-		public boolean mouseClicked(double mouseX, double mouseY, int button) {
-			if(!this.isHovered(mouseX, mouseY)) {
-				return false;
-			}
-			
-			final SpotifyAPI api = plugin.getAPI();
-			if(api == null) {
-				return false;
-			}
-			
-			final PlaybackState status = api.getCurrentStatus();
-			
-			if(status == null) {
-				return false;
-			}
-			
-			final PlaybackState.Item song = status.item;
-			
-			if(song == null) {
-				return false;
-			}
-			
-			//localize mouse pos
-			mouseX -= SpotifyHudElement.this.getStartX();
-			mouseY -= SpotifyHudElement.this.getStartY();
-			mouseX -= this.getScaledX();
-			mouseY -= this.getScaledY();
-			mouseX = (int) (mouseX / this.getScale());
-			mouseY = (int) (mouseY / this.getScale());
-			
-			//pause/play button
-			if(mouseX >= this.playPauseX && mouseX <= this.playPauseX + PAUSE_PLAY_SIZE && mouseY <= this.getScaledY() + PAUSE_PLAY_SIZE) {
-				api.submitTogglePlay();
-				return true;
-			}
-			
-			if(mouseY > this.getScaledY() + CONTROL_SIZE) {
-				return false;
-			}
-			
-			//back button
-			if(mouseX >= this.backX && mouseX <= this.backX + CONTROL_SIZE) {
-				api.submitPrevious();
-				return true;
-			}
-			
-			//next button
-			if(mouseX >= this.nextX && mouseX <= this.nextX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE) {
-				api.submitNext();
-				return true;
-			}
-			
-			//shuffle button
-			if(mouseX >= this.shuffleX && mouseX <= this.shuffleX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE) {
-				api.submitToggleShuffle();
-				return true;
-			}
-			
-			//loop button
-			if(mouseX >= this.loopX && mouseX <= this.loopX + CONTROL_SIZE && mouseY <= this.getScaledY() + CONTROL_SIZE) {
-				api.submitToggleRepeat();
-				return true;
-			}
-			
-			return false;
-		}
-		
-		@Override
-		public double getHeight() {
-			return this.height;
-		}
-		
-		public void setHeight(double v) {
-			this.height = v;
 		}
 		
 	}

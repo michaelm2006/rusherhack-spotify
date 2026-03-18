@@ -68,13 +68,7 @@ public class SpotifyPlugin extends Plugin {
 		}
 		
 		//hud element
-		try {
-			RusherHackAPI.getHudManager().registerFeature(new SpotifyHudElement(this));
-		} catch(IOException e) {
-			//throw exception so plugin doesnt load
-			this.onUnload();
-			throw new RuntimeException(e);
-		}
+		RusherHackAPI.getHudManager().registerFeature(new SpotifyHudElement(this));
 		
 		//TODO: maybe window in the future?
 	}
