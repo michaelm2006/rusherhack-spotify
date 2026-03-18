@@ -229,14 +229,7 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		final IFontRenderer fr = this.getFontRenderer();
 		final SpotifyAPI api = this.plugin.getAPI();
 		final PoseStack matrixStack = context.pose();
-		
-		//background
-		if(this.background.getValue()) {
-			renderer._drawRoundedRectangle(0, 0, this.getWidth(), this.getHeight(), 5, true, false, 0, this.getFillColor(), 0);
-		}
-		//logo
-		renderer.drawGraphicRectangle(this.spotifyLogo, this.getWidth() - 5 - 16, 5, 16, 16);
-		
+
 		if(!this.isConnected()) {
 			this.trackThumbnailTexture.setPixels(null);
 			fr.drawString("Not authenticated with spotify!", 5, 10, -1);
