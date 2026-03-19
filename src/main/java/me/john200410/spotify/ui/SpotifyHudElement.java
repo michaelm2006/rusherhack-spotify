@@ -252,11 +252,12 @@ public class SpotifyHudElement extends ResizeableHudElement {
 //		}
 		
 		//thumbnail
+		final double thumbnailSize = this.songInfo.getHeight() * 0.85;
 		if(this.trackThumbnailTexture.getPixels() != null && this.isAvailable()) {
-			renderer.drawTextureRectangle(this.trackThumbnailTexture.getId(), 65, 65, 5, 5, 65, 65, 3);
+			renderer.drawTextureRectangle(this.trackThumbnailTexture.getId(), (int) thumbnailSize, (int) thumbnailSize, 5, 5, thumbnailSize, thumbnailSize, 3);
 		}
-		
-		final double leftOffset = 75;
+
+		final double leftOffset = 5 + thumbnailSize + 5;
 		
 		//set correct mouse pos because its set to -1, -1 when not in hud editor
 		if(!mc.mouseHandler.isMouseGrabbed()) {
@@ -314,12 +315,12 @@ public class SpotifyHudElement extends ResizeableHudElement {
 	
 	@Override
 	public double getWidth() {
-		return 225;
+		return 175;
 	}
-	
+
 	@Override
 	public double getHeight() {
-		return 75;
+		return this.songInfo.getHeight() + 10;
 	}
 	
 	@Override
@@ -367,7 +368,7 @@ public class SpotifyHudElement extends ResizeableHudElement {
 		
 		@Override
 		public double getWidth() {
-			return SpotifyHudElement.this.getWidth() - 75 - 5;
+			return SpotifyHudElement.this.getWidth() - SpotifyHudElement.this.songInfo.getHeight() - 10;
 		}
 		
 		@Override
